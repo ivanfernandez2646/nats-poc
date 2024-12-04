@@ -1,0 +1,80 @@
+version: '3'
+
+services:
+  mongo:
+    image: mongo
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb:/data/db
+
+  nats:
+    command: ['--jetstream']
+    image: nats:2.10-alpine3.20
+    restart: unless-stopped
+    ports:
+      - 4222:4222 # For clients
+      - 8222:8222 # HTTP management
+      - 6222:6222 # Routing port for clustering
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      test: ['CMD', 'nc', '-zv', 'nats', '4222']
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  natsui:
+    image: ghcr.io/nats-nui/nui:latest
+    depends_on:
+      - nats
+    ports:
+      - 31311:31311
+    volumes:
+      - natsui-data:/db
+
+  influxdb:
+    image: influxdb:2.0
+    container_name: influxdb
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=password1234
+      - DOCKER_INFLUXDB_INIT_ORG=myOrg
+      - DOCKER_INFLUXDB_INIT_BUCKET=myBucket
+    ports:
+      - '8086:8086'
+    networks:
+      - k6-network
+    volumes:
+      - influxdb2-data:/var/lib/influxdb2
+      - influxdb2-config:/etc/influxdb2
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_BASIC_ENABLED=false
+    ports:
+      - '3000:3000'
+    networks:
+      - k6-network
+    depends_on:
+      - influxdb
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+networks:
+  k6-network:
+    driver: bridge
+
+volumes:
+  mongodb:
+  node_modules:
+  nats-data:
+  natsui-data:
+  influxdb2-data:
+  influxdb2-config:
+  grafana-data:

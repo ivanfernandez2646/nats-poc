@@ -1,0 +1,8 @@
+{
+  "mongo": {
+    "url": "mongodb://localhost:27017/typescript-ddd-skeleton-test"
+  },
+  "natsJetstream": {
+    "url": "nats://localhost:4222"
+  }
+}
